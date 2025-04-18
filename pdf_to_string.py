@@ -80,18 +80,46 @@ class PDFToConverter:
             writer.writerows(export_data)
 
 
+def check_path_type(path):
+    if not os.path.exists(path):
+        print(f"パスが存在しません: {path}")
+        sys.exit()
+
+    if os.path.isfile(path):
+        if path.lower().endswith('.pdf'):
+            return "file"
+        else:
+            print(f"対象のファイルはPDFではありません: {path}")
+            sys.exit()
+    elif os.path.isdir(path):
+        return "folder"
+    else:
+        print(f"不明なパスです: {path}")
+        sys.exit()
+
+
 def main():
     if len(sys.argv) == 1:
-        folder_path = input("フォルダパス：").replace('"', '')
+        path = input("パスを入力してください：").replace('"', '').strip()
     else:
-        folder_path = sys.argv[1]
+        path = sys.argv[1]
 
-    pdf_convert = PDFToConverter(target_folder=folder_path)
+    path_type = check_path_type(path)
 
-    for i in range(len(pdf_convert.file_list)):
-        pdf_convert.split_pdf(file_number=i)
-        pdf_convert.pdf_to_string(file_number=i)
-        print(f"完了：{pdf_convert.file_list[i]}")
+    if path_type == "folder":
+        pdf_convert = PDFToConverter(target_folder=path)
+        for i in range(len(pdf_convert.file_list)):
+            pdf_convert.split_pdf(file_number=i)
+            pdf_convert.pdf_to_string(file_number=i)
+            print(f"完了：{pdf_convert.file_list[i]}")
+    elif path_type == "file":
+        # 単一PDFファイルを処理
+        pdf_convert = PDFToConverter(target_folder=os.path.dirname(path))
+        for i in range(len(pdf_convert.file_list)):
+            if os.path.basename(path) == pdf_convert.file_list[i]:
+                pdf_convert.split_pdf(file_number=i)
+                pdf_convert.pdf_to_string(file_number=i)
+        print(f"完了：{os.path.basename(path)}")
 
 
 if __name__ == '__main__':
