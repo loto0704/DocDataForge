@@ -1,7 +1,5 @@
-import csv
 import sys
 import os
-from os.path import isfile
 import logging
 from unstructured.partition.pdf import partition_pdf
 from pypdf import PdfReader, PdfWriter
@@ -50,11 +48,11 @@ class PDFToConverter:
 
     def pdf_to_string(self, file_number: int):
         base_name = self.get_basename(file_number=file_number)
-        output_path = os.path.join(self.target_folder, f"{base_name}.csv")
+        output_path = os.path.join(self.target_folder, f"{base_name}.txt")
 
-        # すでにCSVファイルがある場合はスキップ
-        if isfile(output_path):
-            return
+        # すでに出力ファイルがある場合は削除
+        if os.path.isfile(output_path):
+            os.remove(output_path)
 
         logging.getLogger("pdfminer").setLevel(logging.ERROR)  # 警告メッセージの抑止
 
@@ -63,21 +61,12 @@ class PDFToConverter:
 
         for i in range(len(file_list)):  # ファイルごと
             target_file = os.path.join(self.target_folder, base_name, file_list[i])
-            reader = PdfReader(stream=target_file)
-            for j in range(len(reader.pages)):  # ページごと
-                elements = partition_pdf(filename=target_file)
-                text_elements = [el.text for el in elements if hasattr(el, "text") and el.text]
-                for k in range(len(text_elements)):
-                    export_list.append({"page": i + 1, "内容": text_elements[k]})
+            elements = partition_pdf(filename=target_file)
+            text_elements = "\n\n".join([element.text for element in elements])
+            export_list.append(f"\n{text_elements}\n")
 
-        self.export_csv(export_file_path=output_path, export_data=export_list)
-
-    @staticmethod
-    def export_csv(export_file_path: str, export_data: list[dict[str, str]]):
-        with open(file=export_file_path, mode="w", encoding='UTF-8', newline="") as f:
-            field_names = ['page', '内容']
-            writer = csv.DictWriter(f=f, fieldnames=field_names, quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerows(export_data)
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(export_list))
 
 
 def check_path_type(path):
